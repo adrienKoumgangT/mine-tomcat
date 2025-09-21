@@ -1,12 +1,32 @@
 package com.github.adrien.koumgang.minetomcat.lib.service.request.list;
 
 import com.github.adrien.koumgang.minetomcat.lib.authentication.user.UserToken;
+import com.github.adrien.koumgang.minetomcat.lib.service.filter.Condition;
 import com.github.adrien.koumgang.minetomcat.lib.utils.ToString;
 
-public class ListItemRequest extends BaseListRequest {
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.List;
 
-    private ListItemRequest(Builder builder) {
+public final class ListFilterRequest extends BaseListRequest {
+
+    private final List<Condition> conditions;
+
+    private ListFilterRequest(Builder builder) {
         super(builder);
+        this.conditions = builder.conditions();
+    }
+
+    public boolean hasCondition() {
+        return conditions != null && !conditions.isEmpty();
+    }
+
+    public List<Condition> conditions() {
+        return this.conditions;
+    }
+
+    public ListItemRequest toListRequest() {
+        return ListItemRequest.fromFilter(this);
     }
 
     @Override
@@ -18,17 +38,14 @@ public class ListItemRequest extends BaseListRequest {
         return new BuilderImpl();
     }
 
-    public static ListItemRequest fromFilter(ListFilterRequest request) {
-        return new BuilderImpl(request).build();
-    }
-
-    public final String toString() {
-        return ToString.builder("ListItemRequest")
+    public String toString() {
+        return ToString.builder("ListFilterRequest")
                 .add("ids", this.ids())
                 .add("pagination", this.pagination())
                 .add("asc", this.asc())
                 .add("page", this.page())
                 .add("pageSize", this.pageSize())
+                .add("conditions", this.conditions())
                 .build();
     }
 
@@ -51,20 +68,24 @@ public class ListItemRequest extends BaseListRequest {
         Integer pageSize();
         Builder pageSize(Integer pageSize);
 
-        ListItemRequest build();
+        List<Condition> conditions();
+        Builder conditions(List<Condition> conditions);
+        Builder conditions(Condition... conditions);
+
+        ListFilterRequest build();
     }
 
     static final class BuilderImpl extends BaseListRequest.BuilderImpl implements Builder {
+        private List<Condition> conditions;
+
         private BuilderImpl() {
             super();
-        }
-
-        private BuilderImpl(ListItemRequest model) {
-            super(model);
+            this.conditions = Collections.emptyList();
         }
 
         private BuilderImpl(ListFilterRequest model) {
             super(model);
+            this.conditions = model.conditions;
         }
 
         @Override
@@ -134,9 +155,28 @@ public class ListItemRequest extends BaseListRequest {
         }
 
         @Override
-        public ListItemRequest build() {
-            return new ListItemRequest(this);
+        public List<Condition> conditions() {
+            return this.conditions;
+        }
+
+        @Override
+        public Builder conditions(List<Condition> conditions) {
+            this.conditions = conditions;
+            return this;
+        }
+
+        @Override
+        public Builder conditions(Condition... conditions) {
+            this.conditions(Arrays.asList(conditions));
+            return this;
+        }
+
+        @Override
+        public ListFilterRequest build() {
+            return new ListFilterRequest(this);
         }
     }
+
+
 
 }

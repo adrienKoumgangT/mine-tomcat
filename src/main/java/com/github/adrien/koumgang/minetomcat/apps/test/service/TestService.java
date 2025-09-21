@@ -2,8 +2,11 @@ package com.github.adrien.koumgang.minetomcat.apps.test.service;
 
 import com.github.adrien.koumgang.minetomcat.lib.model.Pagination;
 import com.github.adrien.koumgang.minetomcat.lib.service.BaseService;
+import com.github.adrien.koumgang.minetomcat.lib.service.FieldValue;
+import com.github.adrien.koumgang.minetomcat.lib.service.filter.ComparisonOperator;
 import com.github.adrien.koumgang.minetomcat.lib.service.request.delete.DeleteItemRequest;
 import com.github.adrien.koumgang.minetomcat.lib.service.request.get.GetItemRequest;
+import com.github.adrien.koumgang.minetomcat.lib.service.request.list.ListFilterRequest;
 import com.github.adrien.koumgang.minetomcat.lib.service.request.list.ListItemRequest;
 import com.github.adrien.koumgang.minetomcat.lib.service.request.post.PostItemRequest;
 import com.github.adrien.koumgang.minetomcat.lib.service.request.put.PutItemRequest;
@@ -21,6 +24,7 @@ import com.github.adrien.koumgang.minetomcat.lib.log.MineLog;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Objects;
 import java.util.Optional;
 
 public class TestService extends BaseService {
@@ -40,10 +44,10 @@ public class TestService extends BaseService {
     }
 
 
-    public GetItemResponse<TestView> getItem(GetItemRequest getItemRequest) {
-        MineLog.TimePrinter timePrinter = new MineLog.TimePrinter("[SERVICE] [TEST] [GET] request: " + getItemRequest);
+    public GetItemResponse<TestView> getItem(GetItemRequest request) {
+        MineLog.TimePrinter timePrinter = new MineLog.TimePrinter("[SERVICE] [TEST] [GET] request: " + request);
 
-        String testKey = formTestKey(getItemRequest.id());
+        String testKey = formTestKey(request.id());
 
         try {
             TestView cacheData = RedisInstance.getInstance().get(testKey, TestView.class);
@@ -58,7 +62,7 @@ public class TestService extends BaseService {
         }
 
         try {
-            Optional<Test> optTest = testDao.findById(getItemRequest.id());
+            Optional<Test> optTest = testDao.findById(request.id());
 
             if(optTest.isPresent()) {
                 try {
@@ -80,7 +84,7 @@ public class TestService extends BaseService {
         }
 
 
-        return null;
+        return GetItemResponse.<TestView>builder().build();
     }
 
 
@@ -154,25 +158,31 @@ public class TestService extends BaseService {
         MineLog.TimePrinter timePrinter = new MineLog.TimePrinter("[SERVICE] [TEST] [DELETE] id: " + request);
 
         try {
-            boolean deleted = testDao.delete(request.id());
+            Optional<Test> optTest = testDao.findById(request.id());
 
-            if(deleted) {
-                try {
-                    String testKey = formTestKey(request.id());
-                    RedisInstance.getInstance().delete(testKey);
-                } catch (Exception e) {
-                    timePrinter.error(e.getMessage());
+            if(optTest.isPresent()) {
+                TestView testView = new TestView(optTest.get());
+
+                boolean deleted = testDao.delete(request.id());
+
+                if(deleted) {
+                    try {
+                        String testKey = formTestKey(request.id());
+                        RedisInstance.getInstance().delete(testKey);
+                    } catch (Exception e) {
+                        timePrinter.error(e.getMessage());
+                    }
                 }
+
+                timePrinter.log();
+
+                return DeleteItemResponse.<TestView>builder().item(testView).deleted(deleted).build();
             }
-
-            timePrinter.log();
-
-            return DeleteItemResponse.<TestView>builder().deleted(deleted).build();
         } catch (IllegalArgumentException e) {
             timePrinter.error(e.getMessage());
         }
 
-        return DeleteItemResponse.<TestView>builder().build();
+        return DeleteItemResponse.<TestView>builder().deleted(false).build();
     }
 
 
@@ -202,6 +212,71 @@ public class TestService extends BaseService {
         }
 
         long total = testDao.count();
+
+        Pagination pagination = Pagination.builder()
+                .page(request.page())
+                .pageSize(request.pageSize())
+                .total(total)
+                .build();
+        List<TestView> testViews = tests.stream()
+                .map(TestView::new)
+                .toList();
+
+
+        timePrinter.log();
+
+        return ListItemResponse.<TestView>builder()
+                .ids(ids)
+                .items(testViews)
+                .pagination(pagination)
+                .paginated(paginated)
+                .build();
+    }
+
+    public ListItemResponse<TestView> filter(ListFilterRequest request) {
+
+        boolean callList = !request.hasCondition()
+                || request.conditions().size() != 1
+                || !Objects.equals(request.conditions().getFirst().comparisonOperator(), ComparisonOperator.EQ);
+
+        String name = "";
+        if(!callList) {
+            FieldValue fieldValue = request.conditions().getFirst().fieldValue();
+            if(fieldValue == null || fieldValue.value() == null || fieldValue.value().s() == null) {
+                callList = true;
+            } else name = fieldValue.value().s();
+        }
+
+        if(callList || name.isBlank()) {
+            return this.list(request.toListRequest());
+        }
+
+
+        MineLog.TimePrinter timePrinter = new MineLog.TimePrinter("[SERVICE] [TEST] [LIST CONDITION] request: " + request);
+
+        List<Test> tests;
+        List<String> ids;
+        boolean paginated = false;
+
+        if(request.ids()) {
+            tests = new ArrayList<>();
+            if(request.pagination()) {
+                paginated = true;
+                ids = testDao.findIdsByName(name, request.page(), request.pageSize());
+            } else {
+                ids = testDao.findIdsByName(name);
+            }
+        } else {
+            ids = new ArrayList<>();
+            if(request.pagination()) {
+                paginated = true;
+                tests = testDao.findByName(name, request.page(), request.pageSize());
+            } else {
+                tests = testDao.findByName(name);
+            }
+        }
+
+        long total = testDao.countByName(name);
 
         Pagination pagination = Pagination.builder()
                 .page(request.page())

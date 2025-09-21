@@ -6,6 +6,9 @@ public abstract class BaseListRequest extends BaseRequest {
 
     private static final Integer DEFAULT_PAGE = 1;
     private static final Integer DEFAULT_PAGE_SIZE = 100;
+    private static final Boolean DEFAULT_IDS = false;
+    private static final Boolean DEFAULT_PAGINATION = false;
+    private static final Boolean DEFAULT_SORT = true;
 
     private final Boolean ids;
     private final Boolean pagination;
@@ -66,9 +69,9 @@ public abstract class BaseListRequest extends BaseRequest {
 
     protected abstract static class BuilderImpl extends BaseRequest.BuilderImpl implements Builder {
 
-        private Boolean ids = false;
-        private Boolean pagination = false;
-        private Boolean asc = false;
+        private Boolean ids = DEFAULT_IDS;
+        private Boolean pagination = DEFAULT_PAGINATION;
+        private Boolean asc = DEFAULT_SORT;
         private Integer page = DEFAULT_PAGE;
         private Integer pageSize = DEFAULT_PAGE_SIZE;
 
@@ -85,7 +88,7 @@ public abstract class BaseListRequest extends BaseRequest {
 
         @Override
         public Builder ids(Boolean ids) {
-            this.ids = ids != null ? ids : false;
+            this.ids = ids != null ? ids : DEFAULT_IDS;
             return this;
         }
 
@@ -96,7 +99,7 @@ public abstract class BaseListRequest extends BaseRequest {
 
         @Override
         public Builder pagination(Boolean pagination) {
-            this.pagination = pagination != null ? pagination : false;
+            this.pagination = pagination != null ? pagination : DEFAULT_PAGINATION;
             return this;
         }
 
@@ -107,7 +110,7 @@ public abstract class BaseListRequest extends BaseRequest {
 
         @Override
         public Builder asc(Boolean asc) {
-            this.asc = asc != null ? asc : false;
+            this.asc = asc != null ? asc : DEFAULT_SORT;
             return this;
         }
 

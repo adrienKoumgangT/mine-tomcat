@@ -16,6 +16,7 @@ import com.github.adrien.koumgang.minetomcat.lib.database.nosql.mongodb.core.Mon
 import com.github.adrien.koumgang.minetomcat.lib.database.nosql.mongodb.utils.StringIdConverter;
 import com.github.adrien.koumgang.minetomcat.lib.repository.BaseRepository;
 import org.bson.Document;
+import org.bson.conversions.Bson;
 import org.bson.types.ObjectId;
 
 import java.lang.reflect.Field;
@@ -46,6 +47,13 @@ public class TestRepository extends BaseRepository implements TestDao {
         } catch (NoSuchFieldException e) {
             throw new RuntimeException("Field not found: " + fieldName, e);
         }
+    }
+
+    private Bson getFilterByName(String name) {
+        return Filters.eq(
+                MongoAnnotationProcessor.getFieldName(getField("name")),
+                name
+        );
     }
 
     @Override
@@ -108,6 +116,76 @@ public class TestRepository extends BaseRepository implements TestDao {
                 .skip(skip)
                 .limit(pageSize);
 
+        for (Document document : cursor) {
+            ids.add(StringIdConverter.getInstance().fromObjectId((ObjectId) document.get("_id")));
+        }
+
+        return ids;
+    }
+
+    @Override
+    public long countByName(String name) {
+        return testCollection.countDocuments(getFilterByName(name));
+    }
+
+    @Override
+    public List<Test> findByName(String name) {
+        FindIterable<Document> cursor = testCollection
+                .find(getFilterByName(name));
+        List<Test> tests = new ArrayList<>();
+        for (Document document : cursor) {
+            tests.add(MongoAnnotationProcessor.fromDocument(document, testClass));
+        }
+        return tests;
+    }
+
+    @Override
+    public List<Test> findByName(String name, int page, int pageSize) {
+        if (page < 1) page = 1;
+        if (pageSize < 1) pageSize = 10;
+
+        int skip = (page - 1) * pageSize;
+
+        FindIterable<Document> cursor = testCollection
+                .find(getFilterByName(name))
+                .skip(skip)
+                .limit(pageSize);
+
+        List<Test> tests = new ArrayList<>();
+        for (Document document : cursor) {
+            tests.add(MongoAnnotationProcessor.fromDocument(document, testClass));
+        }
+        return tests;
+    }
+
+    @Override
+    public List<String> findIdsByName(String name) {
+        FindIterable<Document> cursor = testCollection
+                .find(getFilterByName(name))
+                .projection(new Document("_id", 1));
+
+        List<String> ids = new ArrayList<>();
+        for (Document document : cursor) {
+            ids.add(StringIdConverter.getInstance().fromObjectId((ObjectId) document.get("_id")));
+        }
+
+        return ids;
+    }
+
+    @Override
+    public List<String> findIdsByName(String name, int page, int pageSize) {
+        if (page < 1) page = 1;
+        if (pageSize < 1) pageSize = 10;
+
+        int skip = (page - 1) * pageSize;
+
+        FindIterable<Document> cursor = testCollection
+                .find(getFilterByName(name))
+                .projection(new Document("_id", 1))
+                .skip(skip)
+                .limit(pageSize);
+
+        List<String> ids = new ArrayList<>();
         for (Document document : cursor) {
             ids.add(StringIdConverter.getInstance().fromObjectId((ObjectId) document.get("_id")));
         }

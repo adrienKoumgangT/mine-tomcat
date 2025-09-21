@@ -1,8 +1,13 @@
 package com.github.adrien.koumgang.minetomcat.apps.test.controller;
 
 import com.github.adrien.koumgang.minetomcat.lib.model.ListItemView;
+import com.github.adrien.koumgang.minetomcat.lib.service.FieldValue;
+import com.github.adrien.koumgang.minetomcat.lib.service.Value;
+import com.github.adrien.koumgang.minetomcat.lib.service.filter.ComparisonOperator;
+import com.github.adrien.koumgang.minetomcat.lib.service.filter.Condition;
 import com.github.adrien.koumgang.minetomcat.lib.service.request.delete.DeleteItemRequest;
 import com.github.adrien.koumgang.minetomcat.lib.service.request.get.GetItemRequest;
+import com.github.adrien.koumgang.minetomcat.lib.service.request.list.ListFilterRequest;
 import com.github.adrien.koumgang.minetomcat.lib.service.request.list.ListItemRequest;
 import com.github.adrien.koumgang.minetomcat.lib.service.request.post.PostItemRequest;
 import com.github.adrien.koumgang.minetomcat.lib.service.request.put.PutItemRequest;
@@ -146,6 +151,39 @@ public class TestController extends BaseController {
 
         ListItemRequest request = ListItemRequest.builder().userToken(userToken).build();
         ListItemResponse<TestView> response = TestService.getInstance().list(request);
+
+        return ApiResponseController.ok(response.items());
+    }
+
+    @GET
+    @Path("by/name/{name}")
+    @Operation(summary = "Get list of a Test instance By name", description = "Return a list of Test instance")
+    @ApiResponses(value = {
+            @ApiResponse(
+                    responseCode = "200", description = "Successful operation",
+                    content = @Content(array = @ArraySchema(schema = @Schema(implementation = TestView.class)))
+            ),
+            @ApiResponse(responseCode = "401", description = "Unauthorized"),
+            @ApiResponse(responseCode = "500", description = "Internal server error")
+    })
+    @Consumes(MediaType.TEXT_PLAIN)
+    @Produces(MediaType.APPLICATION_JSON)
+    public Response getAllTestsByName(@PathParam("name") String name) throws Exception {
+        ListFilterRequest request = ListFilterRequest.builder()
+                .conditions(
+                        Condition.builder()
+                                .comparisonOperator(ComparisonOperator.EQ)
+                                .fieldValue(
+                                        FieldValue.builder()
+                                                .name("name")
+                                                .value(
+                                                        Value.builder()
+                                                                .s(name)
+                                                                .build()
+                                                ).build()
+                                ).build()
+                ).build();
+        ListItemResponse<TestView> response = TestService.getInstance().filter(request);
 
         return ApiResponseController.ok(response.items());
     }
