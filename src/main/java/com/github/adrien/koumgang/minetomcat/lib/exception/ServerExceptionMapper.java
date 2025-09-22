@@ -1,5 +1,6 @@
 package com.github.adrien.koumgang.minetomcat.lib.exception;
 
+import com.github.adrien.koumgang.minetomcat.lib.service.request.post.PostItemRequest;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 import com.google.gson.reflect.TypeToken;
@@ -87,12 +88,11 @@ public class ServerExceptionMapper implements ExceptionMapper<Throwable> {
                 );
 
                 try {
-                    String idUser = null;
+                    UserToken userToken = null;
                     if(statusCode != 401 && headerMap.containsKey(HttpHeaders.AUTHORIZATION)) {
                         String authorization = headerMap.get(HttpHeaders.AUTHORIZATION).getFirst();
                         try {
-                            UserToken userToken = TokenManager.readToken(authorization);
-                            idUser = userToken.getIdUser();
+                            userToken = TokenManager.readToken(authorization);
                         } catch (Exception ignored) { }
                     }
 
@@ -116,17 +116,22 @@ public class ServerExceptionMapper implements ExceptionMapper<Throwable> {
                             new HashMap<>()
                     );
 
-                    ServerEventLogView serverEventLogView = ServerEventLogService.getInstance()
-                            .saveServerEventLog(
-                                    "exception",
-                                    throwable.getClass().getSimpleName(),
-                                    errorMessage,
-                                    null,
-                                    curlCommand,
-                                    requestDataView,
-                                    idUser
-                            );
-
+                    PostItemRequest<ServerEventLogView> request = PostItemRequest.<ServerEventLogView>builder()
+                            .userToken(userToken)
+                            .item(
+                                    new ServerEventLogView(
+                                            null,
+                                            "exception",
+                                            curlCommand,
+                                            throwable.getClass().getSimpleName(),
+                                            errorMessage,
+                                            null,
+                                            new Date(),
+                                            requestDataView
+                                    )
+                            )
+                            .build();
+                    ServerEventLogService.getInstance().postItem(request);
                 } catch (Exception ignored) { }
             }
         }

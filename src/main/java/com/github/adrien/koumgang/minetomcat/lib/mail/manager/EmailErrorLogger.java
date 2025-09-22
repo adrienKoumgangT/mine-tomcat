@@ -2,6 +2,9 @@ package com.github.adrien.koumgang.minetomcat.lib.mail.manager;
 
 import com.github.adrien.koumgang.minetomcat.apps.server.service.ServerEventLogService;
 import com.github.adrien.koumgang.minetomcat.apps.server.view.ServerEventLogView;
+import com.github.adrien.koumgang.minetomcat.lib.service.request.post.PostItemRequest;
+
+import java.util.Date;
 
 public class EmailErrorLogger {
 
@@ -18,16 +21,21 @@ public class EmailErrorLogger {
 
     public void log(Throwable error){
 
-        ServerEventLogView serverEventLogView = ServerEventLogService.getInstance()
-                .saveServerEventLog(
-                        "mail",
-                        error.getClass().getSimpleName(),
-                        error.getMessage(),
-                        null,
-                        null,
-                        null,
-                        null
-                );
+        PostItemRequest<ServerEventLogView> request = PostItemRequest.<ServerEventLogView>builder()
+                .item(
+                        new ServerEventLogView(
+                                null,
+                                "mail",
+                                null,
+                                error.getClass().getSimpleName(),
+                                error.getMessage(),
+                                null,
+                                new Date(),
+                                null
+                        )
+                )
+                .build();
+        ServerEventLogService.getInstance().postItem(request);
 
     }
 

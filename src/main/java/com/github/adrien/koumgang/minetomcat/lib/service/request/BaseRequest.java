@@ -12,6 +12,10 @@ public abstract class BaseRequest {
         this.userToken = builder.userToken();
     }
 
+    public boolean hasUserToken() {
+        return userToken != null;
+    }
+
     public final Optional<UserToken> userToken() {
         return Optional.ofNullable(this.userToken);
     }

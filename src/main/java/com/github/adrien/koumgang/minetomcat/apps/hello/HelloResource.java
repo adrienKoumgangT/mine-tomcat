@@ -1,10 +1,12 @@
-package com.github.adrien.koumgang.minetomcat;
+package com.github.adrien.koumgang.minetomcat.apps.hello;
 
+import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.ws.rs.GET;
 import jakarta.ws.rs.Path;
 import jakarta.ws.rs.Produces;
 
 @Path("/hello-world")
+@Tag(name = "Hello", description = "API operation related to Hello")
 public class HelloResource {
 
     @GET
@@ -12,5 +14,6 @@ public class HelloResource {
     public String hello() {
         return "Hello, World!";
     }
+
 
 }

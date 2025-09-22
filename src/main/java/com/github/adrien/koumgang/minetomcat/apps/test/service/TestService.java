@@ -27,11 +27,11 @@ import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
 
-public class TestService extends BaseService {
+public class TestService extends BaseService<TestView> {
 
     private final TestDao testDao;
 
-    public TestService(TestDao dao) { this.testDao = dao; }
+    private TestService(TestDao dao) { this.testDao = dao; }
 
 
     public static TestService getInstance() {
@@ -89,65 +89,69 @@ public class TestService extends BaseService {
 
 
     public PostItemResponse<TestView> postItem(PostItemRequest<TestView> request) {
-        MineLog.TimePrinter timePrinter = new MineLog.TimePrinter("[SERVICE] [TEST] [SAVE] test: " + request);
+        if(request.hasItem()) {
+            MineLog.TimePrinter timePrinter = new MineLog.TimePrinter("[SERVICE] [TEST] [SAVE] test: " + request);
 
-        try {
-            Test test = new Test(request.item());
-            String testId = testDao.save(test);
+            try {
+                Test test = new Test(request.item());
+                String testId = testDao.save(test);
 
-            if(testId == null) {
-                timePrinter.error("Error saving test");
-                return null;
+                if(testId == null) {
+                    timePrinter.error("Error saving test");
+                    return null;
+                }
+
+                Optional<Test> optTest = testDao.findById(testId);
+
+                if(optTest.isEmpty()) {
+                    timePrinter.error("Error saving test");
+                    return null;
+                }
+
+                TestView testView = new TestView(optTest.get());
+
+                timePrinter.log();
+
+                return PostItemResponse.<TestView>builder().item(testView).created(true).build();
+            } catch (IllegalArgumentException e) {
+                timePrinter.error(e.getMessage());
             }
-
-            Optional<Test> optTest = testDao.findById(testId);
-
-            if(optTest.isEmpty()) {
-                timePrinter.error("Error saving test");
-                return null;
-            }
-
-            TestView testView = new TestView(optTest.get());
-
-            timePrinter.log();
-
-            return PostItemResponse.<TestView>builder().item(testView).created(true).build();
-        } catch (IllegalArgumentException e) {
-            timePrinter.error(e.getMessage());
         }
 
         return PostItemResponse.<TestView>builder().item(request.item()).created(false).build();
     }
 
     public PutItemResponse<TestView> updateItem(PutItemRequest<TestView> request) {
-        MineLog.TimePrinter timePrinter = new MineLog.TimePrinter("[SERVICE] [TEST] [UPDATE] test: " + request);
+        if(request.hasItem() && request.id() != null) {
+            MineLog.TimePrinter timePrinter = new MineLog.TimePrinter("[SERVICE] [TEST] [UPDATE] test: " + request);
 
-        try {
-            Optional<Test> existingTest = testDao.findById(request.id());
+            try {
+                Optional<Test> existingTest = testDao.findById(request.id());
 
-            if (existingTest.isPresent()) {
-                Test test = existingTest.get();
-                test.update(request.item());
-                boolean updated = testDao.update(test);
+                if (existingTest.isPresent()) {
+                    Test test = existingTest.get();
+                    test.update(request.item());
+                    boolean updated = testDao.update(test);
 
-                if(updated) {
-                    Optional<Test> optTest = testDao.findById(request.id());
+                    if(updated) {
+                        Optional<Test> optTest = testDao.findById(request.id());
 
-                    if(optTest.isPresent()) {
-                        TestView testView = new TestView(optTest.get());
+                        if(optTest.isPresent()) {
+                            TestView testView = new TestView(optTest.get());
 
-                        timePrinter.log();
+                            timePrinter.log();
 
-                        return PutItemResponse.<TestView>builder().item(testView).updated(true).build();
+                            return PutItemResponse.<TestView>builder().item(testView).updated(true).build();
+                        }
                     }
-                }
 
-                timePrinter.error("Error during update test");
-            } else {
-                timePrinter.missing("Test not found");
+                    timePrinter.error("Error during update test");
+                } else {
+                    timePrinter.missing("Test not found");
+                }
+            } catch (IllegalArgumentException e) {
+                timePrinter.error(e.getMessage());
             }
-        } catch (IllegalArgumentException e) {
-            timePrinter.error(e.getMessage());
         }
 
         return PutItemResponse.<TestView>builder().item(request.item()).updated(false).build();
@@ -155,31 +159,33 @@ public class TestService extends BaseService {
 
 
     public DeleteItemResponse<TestView> deleteItem(DeleteItemRequest request) {
-        MineLog.TimePrinter timePrinter = new MineLog.TimePrinter("[SERVICE] [TEST] [DELETE] id: " + request);
+        if(request.id() != null) {
+            MineLog.TimePrinter timePrinter = new MineLog.TimePrinter("[SERVICE] [TEST] [DELETE] id: " + request);
 
-        try {
-            Optional<Test> optTest = testDao.findById(request.id());
+            try {
+                Optional<Test> optTest = testDao.findById(request.id());
 
-            if(optTest.isPresent()) {
-                TestView testView = new TestView(optTest.get());
+                if(optTest.isPresent()) {
+                    TestView testView = new TestView(optTest.get());
 
-                boolean deleted = testDao.delete(request.id());
+                    boolean deleted = testDao.delete(request.id());
 
-                if(deleted) {
-                    try {
-                        String testKey = formTestKey(request.id());
-                        RedisInstance.getInstance().delete(testKey);
-                    } catch (Exception e) {
-                        timePrinter.error(e.getMessage());
+                    if(deleted) {
+                        try {
+                            String testKey = formTestKey(request.id());
+                            RedisInstance.getInstance().delete(testKey);
+                        } catch (Exception e) {
+                            timePrinter.error(e.getMessage());
+                        }
                     }
+
+                    timePrinter.log();
+
+                    return DeleteItemResponse.<TestView>builder().item(testView).deleted(deleted).build();
                 }
-
-                timePrinter.log();
-
-                return DeleteItemResponse.<TestView>builder().item(testView).deleted(deleted).build();
+            } catch (IllegalArgumentException e) {
+                timePrinter.error(e.getMessage());
             }
-        } catch (IllegalArgumentException e) {
-            timePrinter.error(e.getMessage());
         }
 
         return DeleteItemResponse.<TestView>builder().deleted(false).build();
