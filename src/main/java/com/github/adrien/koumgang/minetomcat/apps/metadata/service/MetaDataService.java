@@ -32,7 +32,7 @@ import org.jetbrains.annotations.Unmodifiable;
 import java.lang.reflect.Type;
 import java.util.*;
 
-public class MetaDataService extends BaseService<MetadataView> {
+public final class MetaDataService extends BaseService<MetadataView> {
 
     @Contract(" -> new")
     public static @NotNull MetaDataService getInstance() {
@@ -461,19 +461,17 @@ public class MetaDataService extends BaseService<MetadataView> {
 
             UserToken userToken = request.userToken().get();
 
-            List<Metadata> metadataList;
-            long total;
-            if(name.isBlank()) {
-                total = metaDataDao.count(userToken.getIdUser(), metadataType);
-                metadataList = request.pagination()
-                        ? metaDataDao.findByType(userToken.getIdUser(), metadataType, request.page(), request.pageSize())
-                        : metaDataDao.findByType(userToken.getIdUser(), metadataType);
-            } else {
-                total = metaDataDao.count(userToken.getIdUser(), metadataType, name);
-                metadataList = request.pagination()
-                        ? metaDataDao.findByName(userToken.getIdUser(), metadataType, name, request.page(), request.pageSize())
-                        : metaDataDao.findByName(userToken.getIdUser(), metadataType, name);
-            }
+            List<Metadata> metadataList = name.isBlank()
+                    ? (
+                            request.pagination()
+                                    ? metaDataDao.findByType(userToken.getIdUser(), metadataType, request.page(), request.pageSize())
+                                    : metaDataDao.findByType(userToken.getIdUser(), metadataType)
+                    ) : (
+                            request.pagination()
+                                    ? metaDataDao.findByName(userToken.getIdUser(), metadataType, name, request.page(), request.pageSize())
+                                    : metaDataDao.findByName(userToken.getIdUser(), metadataType, name)
+                    );
+            long total = name.isBlank() ? metaDataDao.count(userToken.getIdUser(), metadataType) : metaDataDao.count(userToken.getIdUser(), metadataType, name);
 
             List<MetadataView> metadataViews = metadataList.stream().map(MetadataView::new).toList();
 

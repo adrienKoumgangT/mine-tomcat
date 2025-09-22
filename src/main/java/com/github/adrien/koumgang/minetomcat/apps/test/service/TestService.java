@@ -27,7 +27,7 @@ import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
 
-public class TestService extends BaseService<TestView> {
+public final class TestService extends BaseService<TestView> {
 
     private final TestDao testDao;
 
@@ -260,27 +260,20 @@ public class TestService extends BaseService<TestView> {
 
         MineLog.TimePrinter timePrinter = new MineLog.TimePrinter("[SERVICE] [TEST] [LIST CONDITION] request: " + request);
 
-        List<Test> tests;
-        List<String> ids;
-        boolean paginated = false;
-
-        if(request.ids()) {
-            tests = new ArrayList<>();
-            if(request.pagination()) {
-                paginated = true;
-                ids = testDao.findIdsByName(name, request.page(), request.pageSize());
-            } else {
-                ids = testDao.findIdsByName(name);
-            }
-        } else {
-            ids = new ArrayList<>();
-            if(request.pagination()) {
-                paginated = true;
-                tests = testDao.findByName(name, request.page(), request.pageSize());
-            } else {
-                tests = testDao.findByName(name);
-            }
-        }
+        List<Test> tests = request.ids()
+                ? new ArrayList<>()
+                : (
+                        request.pagination()
+                                ? testDao.findByName(name, request.page(), request.pageSize())
+                                : testDao.findByName(name)
+                );
+        List<String> ids = !request.ids()
+                ? new ArrayList<>()
+                : (
+                        request.pagination()
+                                ? testDao.findIdsByName(name, request.page(), request.pageSize())
+                                : testDao.findIdsByName(name)
+                );
 
         long total = testDao.countByName(name);
 
@@ -300,7 +293,7 @@ public class TestService extends BaseService<TestView> {
                 .ids(ids)
                 .items(testViews)
                 .pagination(pagination)
-                .paginated(paginated)
+                .paginated(request.pagination())
                 .build();
     }
 

@@ -24,7 +24,7 @@ import com.github.adrien.koumgang.minetomcat.lib.log.MineLog;
 
 import java.util.*;
 
-public class ServerEventLogService extends BaseService<ServerEventLogView> {
+public final class ServerEventLogService extends BaseService<ServerEventLogView> {
 
     public static ServerEventLogService getInstance() {
         return new ServerEventLogService(ServerEventLogRepository.getInstance());
@@ -219,20 +219,17 @@ public class ServerEventLogService extends BaseService<ServerEventLogView> {
 
         MineLog.TimePrinter timePrinter = new MineLog.TimePrinter("[SERVICE] [SERVER EVENT LOG] [LIST CONDITION] request: " + request);
 
-
-        List<ServerEventLog> serverEventLogs;
-        long total;
-        if(event.isBlank()) {
-            total = serverEventLogDao.countByName(name);
-            serverEventLogs = request.pagination()
-                    ? serverEventLogDao.findByName(name, request.page(), request.pageSize())
-                    : serverEventLogDao.findByName(name);
-        } else {
-            total = serverEventLogDao.countByEvent(event);
-            serverEventLogs = request.pagination()
-                    ? serverEventLogDao.findByEvent(event, request.page(), request.pageSize())
-                    : serverEventLogDao.findByEvent(event);
-        }
+        List<ServerEventLog> serverEventLogs = event.isBlank()
+                ? (
+                        request.pagination()
+                                ? serverEventLogDao.findByName(name, request.page(), request.pageSize())
+                                : serverEventLogDao.findByName(name)
+                ) : (
+                        request.pagination()
+                                ? serverEventLogDao.findByEvent(event, request.page(), request.pageSize())
+                                : serverEventLogDao.findByEvent(event)
+                );
+        long total = event.isBlank() ? serverEventLogDao.countByName(name) : serverEventLogDao.countByEvent(event);
 
         List<ServerEventLogView> serverEventLogViews = serverEventLogs.stream().map(ServerEventLogView::new).toList();
 

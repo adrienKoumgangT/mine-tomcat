@@ -161,13 +161,13 @@ public final class ListFilterRequest extends BaseListRequest {
 
         @Override
         public Builder conditions(List<Condition> conditions) {
-            this.conditions = conditions;
+            if(conditions != null) this.conditions = conditions;
             return this;
         }
 
         @Override
         public Builder conditions(Condition... conditions) {
-            this.conditions(Arrays.asList(conditions));
+            if(conditions != null) this.conditions(Arrays.asList(conditions));
             return this;
         }
 
